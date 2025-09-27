@@ -1,7 +1,4 @@
 /* static/style.css */
-         /* Basic Accordion Styles (can be moved to style.css) */
-          /* Styles from your original file are assumed to be in style.css or already here */
-        /* Added/Modified Styles for new features */
         .whois-accordion-button { background-color: #eee; color: #444; cursor: pointer; padding: 12px 18px; width: 100%; text-align: left; border: none; outline: none; transition: 0.4s; margin-top: 5px; border-radius: 4px; font-weight: bold; }
         .whois-accordion-button.active, .whois-accordion-button:hover { background-color: #ccc; }
         .whois-accordion-panel { padding: 0 18px; background-color: white; display: none; overflow: hidden; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; }
@@ -760,4 +757,5 @@ tr:hover {
     word-wrap: break-word; /* Wrap long record values */
     white-space: pre-wrap; /* Preserve line breaks from TXT records */
 }
+
 }
