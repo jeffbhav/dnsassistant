@@ -22,3 +22,5 @@ You will need subscription to a WHOIS API provider, edit the config.ini file to 
 You can run in a venv if you choose to, not a must.
 Once you are in the command line, type python3 webapp.py then use your browser to view the UI: http://localhost:5000
 To view and manage your domains.
+
+Name of db created will be: dns_lookup_results.db. This is where all your domains will be added.
