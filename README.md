@@ -11,6 +11,7 @@ The app will track DNS changes for domains in the system. To track the changes y
 
 (Example)
 successful_nameserver_patterns = godaddy.com
+
 unsuccessful_nameserver_patterns = sedoparking.com, parkingcrew.net, domainsponsor.com, bodis.com
 
 successful_nameserver_patterns are the domains that belong to you. If there is a change in the DNS that means your domain DNS has changed and you need to take action.
