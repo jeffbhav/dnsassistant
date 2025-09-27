@@ -1,0 +1,763 @@
+/* static/style.css */
+         /* Basic Accordion Styles (can be moved to style.css) */
+          /* Styles from your original file are assumed to be in style.css or already here */
+        /* Added/Modified Styles for new features */
+        .whois-accordion-button { background-color: #eee; color: #444; cursor: pointer; padding: 12px 18px; width: 100%; text-align: left; border: none; outline: none; transition: 0.4s; margin-top: 5px; border-radius: 4px; font-weight: bold; }
+        .whois-accordion-button.active, .whois-accordion-button:hover { background-color: #ccc; }
+        .whois-accordion-panel { padding: 0 18px; background-color: white; display: none; overflow: hidden; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; }
+        .whois-accordion-panel pre { background-color: #f9f9f9; border: 1px solid #efefef; }
+        .diff-count-display { margin-left: 10px; font-style: italic; color: #555; }
+        
+        .table-controls { margin-bottom: 10px; text-align: right; }
+        .hamburger-menu { position: relative; display: inline-block; }
+        .column-toggler-button { background-color: #f0f0f0; border: 1px solid #ccc; padding: 8px 12px; cursor: pointer; border-radius: 4px; }
+        .column-toggler-button:hover { background-color: #e0e0e0; }
+        .column-selector { display: none; position: absolute; background-color: #f9f9f9; min-width: 200px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 100; right: 0; border: 1px solid #ddd; border-radius: 4px; padding: 10px; text-align: left; }
+        .column-selector label { display: block; margin-bottom: 5px; font-size: 0.9em; cursor: pointer; }
+        .column-selector label input { margin-right: 8px; vertical-align: middle; }
+        .column-selector.show { display: block; }
+        .hidden-column { display: none !important; }
+
+        /* Styles for Progress Pop-up */
+        .progress-popup-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5); /* Semi-transparent background */
+            z-index: 1050; /* Above other modals */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            flex-direction: column; /* Stack content vertically if needed */
+        }
+        .progress-popup-content {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 550px; /* Slightly wider for better content display */
+            position: relative;
+            text-align: center;
+        }
+        .progress-popup-content h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #0056b3;
+            font-size: 1.3em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .progress-popup-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.8em; /* Larger close button */
+            font-weight: bold;
+            color: #888;
+            cursor: pointer;
+            border: none;
+            background: none;
+            line-height: 1;
+        }
+        .progress-popup-close-btn:hover {
+            color: #000;
+        }
+        #progress-popup-overlay .batch-progress-box { /* Style prefix added */
+            border: 1px solid #b0e0e6; padding: 15px; margin-top: 0; margin-bottom: 15px;
+            background-color: #e0f2f7; border-radius: 8px; min-height: 50px; display: flex;
+            align-items: center; justify-content: center; font-style: italic; color: #3a5a6a;
+            flex-direction: column; gap: 8px; text-align: center;
+        }
+        #progress-popup-overlay .batch-progress-details { /* Style prefix added */
+            text-align: left; width: 100%; margin-bottom: 10px; padding-left: 10px;
+            box-sizing: border-box; font-size: 0.9em; color: #444;
+        }
+        #progress-popup-overlay .batch-progress-details strong { color: #0056b3; }
+        #progress-popup-overlay .batch-progress-bar { /* Style prefix added */
+            width: 100%; height: 25px; background-color: #e0e0e0; border-radius: 12px;
+            overflow: hidden; margin-bottom: 10px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        #progress-popup-overlay .batch-progress-fill { /* Style prefix added */
+            height: 100%; background-color: #4CAF50; width: 0%;
+            text-align: center; color: white; line-height: 25px;
+            font-size: 0.9em; transition: width 0.5s ease-in-out;
+        }
+        #progress-popup-overlay .batch-progress-summary { /* Style prefix added */
+            font-weight: bold; color: #0056b3; margin-top: 0; margin-bottom: 15px; font-size: 1.1em;
+        }
+        #progress-popup-overlay #popup-disconnect-sse { /* Ensure ID is unique if old one remains */
+            margin-top: 10px;
+        }
+
+        /* Styles for Collapsible Sections */
+        .filter-section > .collapsible-header { /* Target direct child */
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer;
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #eee; 
+            margin-bottom: 15px; 
+        }
+        .filter-section > .collapsible-header h2 {
+            margin: 0; 
+            padding-bottom: 0;
+            border-bottom: none;
+            color: #0056b3; 
+            font-size: 1.2em; 
+        }
+        .toggle-icon {
+            font-size: 1.2em; padding: 0 5px; color: #007bff; font-weight: bold;
+        }
+        .toggle-icon:hover { color: #0056b3; }
+        .collapsible-content.hidden { display: none; }
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+	
+}
+
+.container {
+    width: 95%;
+    max-width: 1900px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    color: #0056b3;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.header-stats {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    color: #555;
+    background-color: #eaf6ff;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #cceeff;
+}
+.header-stats span {
+    margin: 0 15px;
+    font-weight: normal;
+}
+.header-stats strong {
+    color: #007bff;
+}
+
+
+.flash-messages .alert {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.alert-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+.alert-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+.alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+.run-history-link-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* New: Action Buttons Container */
+.action-buttons-container {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.button:hover {
+    background-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.small-button {
+    padding: 6px 10px;
+    font-size: 0.85em;
+}
+
+.primary-button {
+    background-color: #007bff;
+}
+.primary-button:hover {
+    background-color: #0056b3;
+}
+
+.secondary-button {
+    background-color: #6c757d; /* Gray */
+}
+.secondary-button:hover {
+    background-color: #5a6268;
+}
+.danger-button { /* For delete actions */
+    background-color: #dc3545;
+}
+.danger-button:hover {
+    background-color: #c82333;
+}
+/* DNSSEC Status Colors */
+td[data-dnssec-status="Secure"] {
+    color: #28a745; /* green */
+    font-weight: bold;
+}
+td[data-dnssec-status="Insecure"] {
+    color: #dc3545; /* red */
+}
+td[data-dnssec-status^="Error"] {
+    color: #ffc107; /* amber */
+    font-style: italic;
+}
+
+.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.run-controls-section,
+.batch-actions-section,
+.progress-section,
+.filter-section,
+.add-domain-section {
+    background-color: #f9f9f9;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.run-controls-section h2,
+.batch-actions-section h2,
+.progress-section h2,
+.filter-section h2,
+.add-domain-section h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #0056b3;
+    font-size: 1.2em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px; /* Space between form items */
+}
+
+.filter-section form { /* Specific for filter form to ensure content fits */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Auto-fit columns */
+    gap: 15px;
+    align-items: end;
+}
+
+.filter-section form .filter-item {
+    margin: 0; /* Remove default margin from filter-item */
+}
+
+.form-group-full {
+    flex-basis: 100%;
+}
+
+form label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+    width: 100%; /* Ensure label takes full width for flex wrapping */
+}
+
+form input[type="text"],
+form input[type="number"],
+form select,
+form input[type="file"],
+form input[type="date"] { /* Added date input */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 0.9em;
+    width: 100%; /* Make inputs fill their container */
+}
+
+form select[multiple] { /* Style for multi-select dropdown */
+    min-height: 80px; /* Make it tall enough to show multiple options */
+    padding: 5px;
+}
+
+form button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #0056b3;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+    width: 100%; /* Ensure button group takes full width */
+    justify-content: flex-end; /* Align buttons to the right if space allows */
+}
+
+.button-group .button {
+    flex-grow: 1;
+    min-width: 120px; /* Smaller min-width for modal buttons */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9em;
+    table-layout: fixed; /* Allow columns to size based on content */
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+    vertical-align: top; /* Align content to the top */
+    word-break: break-word; /* Ensure long text breaks */
+}
+
+th {
+    background-color: #e9ecef;
+    cursor: pointer;
+    position: relative;
+    padding-right: 25px; /* Space for sort icon */
+}
+
+th .sort-icon {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
+}
+
+tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+tr:hover {
+    background-color: #e6f7ff;
+}
+
+.pagination {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.pagination a, .pagination span {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 0 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #007bff;
+    transition: background-color 0.3s;
+}
+
+.pagination a:hover:not(.active) {
+    background-color: #f0f0f0;
+}
+
+.pagination .active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination .disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.checkbox-column {
+    text-align: center;
+    width: 30px; /* Fixed width for checkbox */
+}
+
+.whois-button {
+    padding: 6px 10px;
+    background-color: #28a745; /* Green */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background-color 0.3s ease;
+}
+
+.whois-button:hover {
+    background-color: #218838;
+}
+
+/* Modal styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+    padding-top: 60px;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto; /* 5% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%; /* Could be more responsive */
+    max-width: 600px; /* Max width */
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+	overflow-wrap: break-word; /* Forces long words/strings to break */
+    word-break: break-all;     /* An alternative/additional rule for aggressive breaking */
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+}
+
+.modal h2 {
+    margin-top: 0;
+    color: #0056b3;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.modal pre {
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    white-space: pre-wrap; /* Wrap long lines */
+    word-wrap: break-word; /* Break long words */
+    max-height: 200px; /* Limit height of raw text */
+}
+
+.modal ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.modal li {
+    margin-bottom: 5px;
+    padding: 5px 0;
+    border-bottom: 1px dotted #eee;
+}
+
+.modal li:last-child {
+    border-bottom: none;
+}
+
+/* Batch Progress specific styles */
+.progress-section {
+    position: relative; /* For the "x" button positioning */
+}
+
+.batch-progress-box {
+    border: 1px solid #b0e0e6; /* Light blue border */
+    padding: 15px;
+    margin-top: 15px;
+    background-color: #e0f2f7; /* Lighter blue background */
+    border-radius: 8px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+    color: #3a5a6a; /* Darker text */
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+}
+
+.batch-progress-details { /* New container for specific counts */
+    text-align: left;
+    width: 100%;
+    margin-top: 10px;
+    padding-left: 10px;
+    box-sizing: border-box;
+    font-size: 0.9em;
+    color: #444;
+}
+.batch-progress-details strong {
+    color: #0056b3;
+}
+
+
+.batch-progress-bar {
+    width: 100%;
+    height: 25px;
+    background-color: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 10px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.batch-progress-fill {
+    height: 100%;
+    background-color: #4CAF50; /* Green */
+    width: 0%;
+    text-align: center;
+    color: white;
+    line-height: 25px;
+    font-size: 0.9em;
+    transition: width 0.5s ease-in-out;
+}
+
+.batch-progress-summary {
+    font-weight: bold;
+    color: #0056b3;
+    margin-top: 10px;
+    font-size: 1.1em;
+}
+
+#disconnect-sse {
+    margin-top: 10px;
+    background-color: #dc3545; /* Red for stop button */
+}
+#disconnect-sse:hover {
+    background-color: #c82333;
+}
+
+.record-type-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px; /* Spacing between checkboxes */
+    margin-top: 10px;
+    padding: 5px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #fefefe;
+    width: 100%; /* Ensure it takes full width in form-group-full */
+}
+
+.record-type-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between checkbox and text */
+    font-weight: normal;
+    margin-bottom: 0;
+    cursor: pointer;
+    flex-basis: auto; /* Allow items to size naturally */
+}
+
+.record-type-checkboxes input[type="checkbox"] {
+    margin: 0; /* Remove default margin */
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0; /* Don't shrink checkbox */
+}
+
+.radio-options label {
+    font-weight: normal;
+    display: inline-flex; /* Align radio button and text */
+    align-items: center;
+    gap: 5px;
+    margin-right: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+.radio-options input[type="radio"] {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.category-summary { /* New style for category counts */
+    text-align: center;
+    margin-bottom: 20px;
+    background-color: #eaf6ff;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #cceeff;
+    font-size: 1em;
+    display: flex; /* Use flexbox for spacing counts */
+    justify-content: space-around; /* Distribute items evenly */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 10px; /* Gap between items */
+}
+.category-summary span {
+    margin: 0; /* Remove default margin from spans within flex container */
+    font-weight: normal;
+    white-space: nowrap; /* Prevent wrapping for each stat */
+}
+.category-summary strong {
+    font-weight: bold;
+    color: #007bff; /* Default blue for stats */
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        margin: 10px;
+        padding: 15px;
+    }
+    .action-buttons-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .action-buttons-container .button {
+        width: 100%;
+    }
+    .filter-section form {
+        grid-template-columns: 1fr; /* Stack filters vertically */
+    }
+    .filter-item, .form-group-full {
+        width: 100%;
+        margin-right: 0;
+    }
+    .button-group button {
+        width: 100%;
+        min-width: unset;
+    }
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    tr { border: 1px solid #ccc; margin-bottom: 10px; }
+    td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+    }
+    td:before {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+    }
+    /* Data-specific labels for responsive table view */
+    td:nth-of-type(1):before { content: "Select"; }
+    td:nth-of-type(2):before { content: "ID"; }
+    td:nth-of-type(3):before { content: "Timestamp"; }
+    td:nth-of-type(4):before { content: "Domain Name"; }
+    td:nth-of-type(5):before { content: "NS Records"; }
+    td:nth-of-type(6):before { content: "A/AAAA"; }
+    td:nth-of-type(7):before { content: "MX"; }
+    td:nth-of-type(8):before { content: "Other Records"; }
+    td:nth-of-type(9):before { content: "Raw Status"; }
+    td:nth-of-type(10):before { content: "Details"; }
+    td:nth-of-type(11):before { content: "Category"; }
+    td:nth-of-type(12):before { content: "Actions"; }
+    .modal-content {
+        width: 95%;
+        margin: 30px auto;
+    }
+    .category-summary {
+        flex-direction: column; /* Stack categories vertically on small screens */
+        align-items: flex-start;
+    }
+    .category-summary span {
+        width: 100%; /* Each stat takes full width */
+    }
+	/* Styles for new "View Details" button */
+.details-button {
+    background-color: #6c757d; /* Gray */
+    padding: 4px 8px;
+    font-size: 0.8em;
+}
+
+.details-button:hover {
+    background-color: #5a6268;
+}
+
+/* Hide the data containers in the table */
+.hidden-details {
+    display: none;
+}
+
+/* Styles for the content inside the details modal */
+.details-list {
+    margin: 0;
+    padding: 0;
+}
+
+.details-list dt {
+    font-weight: bold;
+    color: #0056b3;
+    padding: 8px;
+    background-color: #eaf6ff;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+.details-list dd {
+    margin-left: 20px;
+    padding: 8px;
+    border-left: 3px solid #eee;
+    word-wrap: break-word; /* Wrap long record values */
+    white-space: pre-wrap; /* Preserve line breaks from TXT records */
+}
+}

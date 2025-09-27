@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Domain Inventory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>DNS Domain Inventory Management</h1>
+        <div class="header-stats">
+            <span>Total Unique Domains: <strong>{{ total_unique_domains }}</strong></span>
+            <span>Total Lookup Entries (Historical): <strong>{{ total_lookup_entries }}</strong></span>
+			<p>
+      		<span class="expiring-stats">
+                Domains Expiring:
+                <a href="#" class="expiring-link" data-period="today">Today (<strong>{{ expiring_counts.today }}</strong>)</a> |
+                <a href="#" class="expiring-link" data-period="week">This Week (<strong>{{ expiring_counts.week }}</strong>)</a> |
+                <a href="#" class="expiring-link" data-period="month">This Month (<strong>{{ expiring_counts.month }}</strong>)</a> |
+                <a href="#" class="expiring-link" data-period="next_week">Next Week (<strong>{{ expiring_counts.next_week }}</strong>)</a> |
+                <a href="#" class="expiring-link" data-period="next_month">Next Month (<strong>{{ expiring_counts.next_month }}</strong>)</a>
+            </span>
+            </p>
+
+            <div id="active-batch-id-display" style="font-size: 0.8em; color: #888; margin-top: 5px; display: none;"></div>
+        </div>
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        <div class="run-history-link-container"><a href="{{ url_for('runs') }}" class="button primary-button">View Run History</a></div>
+         <div class="action-buttons-container">
+            <button id="open-dns-check-modal" class="button">Trigger DNS Checks</button>
+            <button id="open-whois-batch-modal" class="button">Run Batch WHOIS Lookup</button>
+			<button id="open-parse-whois-modal" class="button">Parse Raw WHOIS</button>
+            <button id="open-export-modal" class="button">Export Data</button>
+            <button id="open-add-domain-modal" class="button primary-button">Add New Domain</button>
+            <button id="open-csv-upload-modal" class="button primary-button">Import Domains (CSV)</button>
+            <button id="open-bulk-categorize-modal" class="button secondary-button">Bulk Recategorize</button>
+            <button id="open-bulk-delete-modal" class="button danger-button">Bulk Delete</button>
+         </div>
+
+        <div class="filter-section">
+            <div class="collapsible-header" id="filter-section-header">
+                 <h2>Filter & Search</h2>
+                 <span class="toggle-icon" data-target-id="filter-content-wrapper" data-storage-key="filterSectionCollapsedState">[–]</span>
+            </div>
+            <div id="filter-content-wrapper" class="collapsible-content">
+                <div class="category-summary">
+                    <span>All: <strong>{{ all_categorized_current }}</strong></span>
+                    <span>Successful: <strong style="color: #28a745;">{{ category_latest_counts.SUCCESSFUL }}</strong></span>
+                    <span>Unsuccessful: <strong style="color: #dc3545;">{{ category_latest_counts.UNSUCCESSFUL }}</strong></span>
+                    <span>Other: <strong style="color: #6c757d;">{{ category_latest_counts.OTHER }}</strong></span>
+                </div>
+                <form method="GET" action="{{ url_for('index') }}" id="filter-form">
+                    <div class="filter-item">
+                        <label for="search_term">Search Term:</label>
+                        <input type="text" id="search_term" name="search_term" value="{{ search_term }}" placeholder="e.g., example.com">
+                    </div>
+                    <div class="filter-item">
+                        <label for="search_by">Search By:</label>
+                        <select id="search_by" name="search_by">
+                            <option value="domain_name" {% if search_by_param == 'domain_name' %}selected{% endif %}>Domain Name</option>
+                            <option value="nameservers_found" {% if search_by_param == 'nameservers_found' %}selected{% endif %}>Nameservers</option>
+                            <option value="raw_status" {% if search_by_param == 'raw_status' %}selected{% endif %}>Status</option>
+                            <option value="details" {% if search_by_param == 'details' %}selected{% endif %}>Details</option>
+                            <option value="category" {% if search_by_param == 'category' %}selected{% endif %}>Category</option>
+                            <option value="id" {% if search_by_param == 'id' %}selected{% endif %}>ID</option>
+                            <option value="soa_record_details" {% if search_by_param == 'soa_record_details' %}selected{% endif %}>SOA Details</option>
+                            <option value="ns_consistent_with_self" {% if search_by_param == 'ns_consistent_with_self' %}selected{% endif %}>NS Consistency</option>
+                            <option value="whois_privacy" {% if search_by_param == 'whois_privacy' %}selected{% endif %}>WHOIS Privacy</option>
+                            <option value="ptr_records" {% if search_by_param == 'ptr_records' %}selected{% endif %}>PTR Records</option>
+                            <option value="dnssec_status" {% if search_by_param == 'dnssec_status' %}selected{% endif %}>DNSSEC Status</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="multi_category_filter">Filter by Category (multiple):</label>
+                        <select id="multi_category_filter" name="multi_category_filter" multiple size="3">
+                            {% for category_opt in categories %}
+                                <option value="{{ category_opt }}" {% if category_opt in multi_category_filter %}selected{% endif %}>{{ category_opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="whois_privacy_filter">WHOIS Privacy:</label>
+                        <select id="whois_privacy_filter" name="whois_privacy_filter">
+                            <option value="" {% if not whois_privacy_filter %}selected{% endif %}>Any</option>
+                            <option value="yes" {% if whois_privacy_filter == 'yes' %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if whois_privacy_filter == 'no' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="start_date">Start Date:</label>
+                        <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="filter-item">
+                        <label for="end_date">End Date:</label>
+                        <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+					<div class="filter-item">
+                        <label for="created_date_filter">Created Date:</label>
+                        <input type="date" id="created_date_filter" name="created_date_filter" value="{{ created_date_filter }}">
+                    </div>
+                    <div class="filter-item">
+                        <label for="expiry_date_filter">Expiry Date:</label>
+                        <input type="date" id="expiry_date_filter" name="expiry_date_filter" value="{{ expiry_date_filter }}">
+                    </div>
+                    <div class="filter-item">
+                        <label for="updated_date_filter">Updated Date:</label>
+                        <input type="date" id="updated_date_filter" name="updated_date_filter" value="{{ updated_date_filter }}">
+                    </div>
+                    <div class="filter-item">
+                        <label for="per_page">Per Page:</label>
+                        <input type="number" id="per_page" name="per_page" value="{{ per_page }}" min="1" max="200">
+                    </div>
+                    <button type="submit" class="button">Apply Filters</button>
+                    <button type="button" onclick="clearFiltersAndSelections()" class="button secondary-button">Clear All Filters</button>
+                </form>
+            </div>
+        </div>
+
+        {# DEFINE page_args ONCE, BEFORE it is used by either pagination block #}
+        {% set page_args = {
+            'per_page': per_page,
+            'search_term': search_term,
+            'search_by': search_by_param,
+            'category_filter': category_filter,
+            'sort_by': current_sorting_info.by,
+            'sort_order': current_sorting_info.order,
+            'multi_category_filter': multi_category_filter,
+            'whois_privacy_filter': whois_privacy_filter,
+            'start_date': start_date,
+            'end_date': end_date,
+            'checked_ids_for_sort': pagination_checked_ids_csv,
+            'created_date_filter': created_date_filter,
+            'expiry_date_filter': expiry_date_filter,
+            'updated_date_filter': updated_date_filter
+        } %}
+
+		<div class="pagination">
+            {# --- TOP PAGINATION BLOCK --- #}
+            {% if pagination_info.has_prev %}<a href="{{ url_for('index', **dict(page_args, page=pagination_info.prev_num)) }}" class="button pagination-link">« Previous</a>{% else %}<span class="button disabled">« Previous</span>{% endif %}
+            <span>Page {{ pagination_info.page }} of {{ pagination_info.total_pages }} (Recs: {{ pagination_info.total_records }})</span>
+            {% if pagination_info.has_next %}<a href="{{ url_for('index', **dict(page_args, page=pagination_info.next_num)) }}" class="button pagination-link">Next »</a>{% else %}<span class="button disabled">Next »</span>{% endif %}
+        </div>
+        <div class="table-controls">
+            <div class="hamburger-menu">
+                <button id="toggle-columns-btn" class="column-toggler-button">☰ Toggle Columns</button>
+                <div id="column-selector-dropdown" class="column-selector">
+                    {# Checkboxes will be populated by JavaScript #}
+                </div>
+            </div>
+        </div>
+        <div class="results-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-column" data-sort-by="selected_status" data-column-id="col-select">
+                            <input type="checkbox" id="select-all-checkbox">
+                             <span class="sort-icon">{% if current_sorting_info.by == 'selected_status' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span>
+                        </th>
+                        <th data-sort-by="id" data-column-id="col-id">ID<span class="sort-icon">{% if current_sorting_info.by == 'id' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="timestamp" data-column-id="col-timestamp">Timestamp<span class="sort-icon">{% if current_sorting_info.by == 'timestamp' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="domain" data-column-id="col-domain">Domain<span class="sort-icon">{% if current_sorting_info.by == 'domain' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="created_date" data-column-id="col-created">Created<span class="sort-icon">{% if current_sorting_info.by == 'created_date' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="expiry_date" data-column-id="col-expiry">Expires<span class="sort-icon">{% if current_sorting_info.by == 'expiry_date' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="updated_date" data-column-id="col-updated">Updated<span class="sort-icon">{% if current_sorting_info.by == 'updated_date' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+						<th data-sort-by="nameservers" data-column-id="col-ns">NS<span class="sort-icon">{% if current_sorting_info.by == 'nameservers' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-column-id="col-a-aaaa">A/AAAA</th>
+                        <th data-sort-by="ptr" data-column-id="col-ptr">PTR<span class="sort-icon">{% if current_sorting_info.by == 'ptr' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="dnssec" data-column-id="col-dnssec">DNSSEC<span class="sort-icon">{% if current_sorting_info.by == 'dnssec' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-column-id="col-mx">MX</th>
+                        <th data-column-id="col-other-recs">Records</th>
+                        <th data-sort-by="status" data-column-id="col-status">Status<span class="sort-icon">{% if current_sorting_info.by == 'status' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="details" data-column-id="col-details">Details<span class="sort-icon">{% if current_sorting_info.by == 'details' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="category" data-column-id="col-category">Category<span class="sort-icon">{% if current_sorting_info.by == 'category' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-sort-by="whois_privacy" data-column-id="col-privacy">Privacy<span class="sort-icon">{% if current_sorting_info.by == 'whois_privacy' %}{{ '▲' if current_sorting_info.order == 'asc' else '▼' }}{% endif %}</span></th>
+                        <th data-column-id="col-actions">Actions</th>
+                    </tr>
+                </thead>
+				<tbody>
+                    {% for result in results %}
+                    <tr data-category="{{ result.category }}">
+                        <td class="checkbox-column" data-column-id="col-select"><input type="checkbox" class="row-checkbox" value="{{ result.id }}"></td>
+                        <td data-column-id="col-id">{{ result.id }}</td>
+                        <td data-column-id="col-timestamp">{{ result.timestamp }}</td>
+                        <td data-column-id="col-domain">{{ result.domain_name|lower }} <br> <button class="edit-domain-button button small-button" data-entry-id="{{ result.id }}" data-domain-name="{{ result.domain_name }}">Edit</button></td>
+                        <td data-column-id="col-created">{{ result.creation_date_from_parse or 'N/A' }}</td>
+                        <td data-column-id="col-expiry">{{ result.expiry_date_from_parse or 'N/A' }}</td>
+                        <td data-column-id="col-updated">{{ result.updated_date_from_parse or 'N/A' }}</td>
+						<td data-column-id="col-ns">{{ result.nameservers_found if result.nameservers_found else 'N/A' }}</td>
+                        
+                        <td data-column-id="col-a-aaaa">
+                            {# DIRECT STRING CHECK: Is the content more than an empty array '[]'? #}
+                            {% if (result.a_records and result.a_records|length > 2) or (result.aaaa_records and result.aaaa_records|length > 2) %}
+                                <button class="details-button button small-button" data-modal-type="aaaa" data-domain-name="{{ result.domain_name }}">View</button>
+                                <div class="hidden-details" data-type="aaaa-data" data-a="{{ result.a_records }}" data-aaaa="{{ result.aaaa_records }}"></div>
+                            {% endif %}
+                        </td>
+                        <td data-column-id="col-ptr">
+                            {# DIRECT STRING CHECK: Is the content more than an empty object '{}'? #}
+                            {% if result.ptr_records and result.ptr_records|length > 2 %}
+                                <button class="details-button button small-button" data-modal-type="ptr" data-domain-name="{{ result.domain_name }}">View</button>
+                                <div class="hidden-details" data-type="ptr-data" data-ptr="{{ result.ptr_records }}"></div>
+                            {% endif %}
+                        </td>
+                        <td data-column-id="col-dnssec" data-dnssec-status="{{ result.dnssec_status }}">{{ result.dnssec_status }}</td>
+                        <td data-column-id="col-mx">
+                            {# DIRECT STRING CHECK: Is the content more than an empty array '[]'? #}
+                             {% if result.mx_records and result.mx_records|length > 2 %}
+                                <button class="details-button button small-button" data-modal-type="mx" data-domain-name="{{ result.domain_name }}">View</button>
+                                <div class="hidden-details" data-type="mx-data" data-mx="{{ result.mx_records }}"></div>
+                            {% endif %}
+                        </td>      
+						<td data-column-id="col-other-recs">
+                             {# MORE COMPREHENSIVE CHECK FOR ALL FIELDS #}
+                            {% if (result.txt_records and result.txt_records|length > 2) or (result.cname_record and result.cname_record != 'null') or (result.soa_record_details and result.soa_record_details|length > 2) or (result.srv_records and result.srv_records|length > 2) or (result.caa_records and result.caa_records|length > 2) or result.ns_consistent_with_self or (result.soa_serial_changed is not none) %}
+                                <button class="details-button button small-button" data-modal-type="other" data-domain-name="{{ result.domain_name }}">View</button>
+                                <div class="hidden-details" data-type="other-data" 
+                                     data-txt="{{ result.txt_records }}" 
+                                     data-cname="{{ result.cname_record }}"
+                                     data-soa="{{ result.soa_record_details }}"
+                                     data-srv="{{ result.srv_records }}"
+                                     data-caa="{{ result.caa_records }}"
+                                     data-dmarc="{{ result.dmarc_record_present }}"
+                                     data-spf="{{ result.spf_record_present }}"
+                                     data-soa-changed="{{ result.soa_serial_changed }}"
+                                     data-ns-consistency="{{ result.ns_consistent_with_self }}"></div>
+                            {% endif %}
+                        </td>
+
+    
+                        <td data-column-id="col-status">{{ result.raw_status }}</td>
+                        <td data-column-id="col-details">{{ result.details }}</td>
+                        <td data-column-id="col-category">{{ result.category }}</td>
+                        <td data-column-id="col-privacy">
+                            {% if result.whois_privacy_enabled is not none %}
+                                {{ 'Yes' if result.whois_privacy_enabled == 1 else 'No' }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td data-column-id="col-actions"><button class="whois-button button small-button" data-domain="{{ result.domain_name }}">WHOIS</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination">
+             {# --- BOTTOM PAGINATION BLOCK --- #}
+            {% if pagination_info.has_prev %}<a href="{{ url_for('index', **dict(page_args, page=pagination_info.prev_num)) }}" class="button pagination-link">« Previous</a>{% else %}<span class="button disabled">« Previous</span>{% endif %}
+            <span>Page {{ pagination_info.page }} of {{ pagination_info.total_pages }} (Recs: {{ pagination_info.total_records }})</span>
+            {% if pagination_info.has_next %}<a href="{{ url_for('index', **dict(page_args, page=pagination_info.next_num)) }}" class="button pagination-link">Next »</a>{% else %}<span class="button disabled">Next »</span>{% endif %}
+        </div>
+    </div>
+
+    <!-- WHOIS Modal -->
+    <div id="whoisModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="whoisModal">×</span>
+            <h2>WHOIS Records for <span id="whoisDomainName"></span></h2>
+            <div id="whoisDataContainer">
+                <p>Loading WHOIS data...</p>
+            </div>
+                  
+<div id="whoisError" style="color: red; display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Generic Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="detailsModal">×</span>
+            <h2 id="detailsModalTitle">Details</h2>
+            <div id="detailsModalContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    
+
+    <!-- Trigger DNS Checks Modal -->
+    <div id="dnsCheckModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="dnsCheckModal">×</span>
+            <h2>Trigger DNS Checks</h2>
+            <form id="dns-check-form-modal" action="{{ url_for('trigger_dns_check') }}" method="POST">
+                <input type="hidden" id="selected_dns_check_ids" name="selected_dns_check_ids">
+                <div class="form-group-full">
+                    <label for="check_type_modal">Choose Check Type:</label>
+                    <select id="check_type_modal" name="check_type">
+                        <option value="full_check">Full Check (from domains.txt)</option>
+                        <option value="recheck_successful">Re-check 'Successful' Domains (from DB)</option>
+                        <option value="recheck_category">Re-check by Category (from DB)</option>
+                        <option value="checked_domains">Check Marked Domains (from UI)</option>
+                        <option value="new_domains_from_txt">Check New Domains (from domains.txt not in DB)</option>
+                        <option value="single_domain">Check Single Domain</option>
+                    </select>
+                    <span id="selected-dns-check-count-display" class="diff-count-display" style="display:none;">(0 selected)</span>
+                    <span id="diff-domains-count-display" class="diff-count-display" style="display:none;">Calculating...</span>
+                </div>
+                <div class="form-group-full" id="input_file_group_modal">
+                    <label for="input_file_modal">Input File (for Full Check or New Domains):</label>
+                    <input type="text" id="input_file_modal" name="input_file" value="{{ default_domains_input_file }}" placeholder="e.g., domains.txt">
+                </div>
+                <div class="form-group-full" id="category_group_modal" style="display:none;">
+                    <label for="category_for_recheck_modal">Select Category:</label>
+                    <select id="category_for_recheck_modal" name="category_for_recheck">
+                        {% for category_opt in categories %}
+                            <option value="{{ category_opt }}">{{ category_opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-full" id="single_domain_group_modal" style="display:none;">
+                    <label for="domain_name_modal">Domain Name:</label>
+                    <input type="text" id="domain_name_modal" name="domain_name" placeholder="example.com">
+                </div>
+                <div class="form-group-full">
+                    <label>Record Types to Check (leave blank for default from config):</label>
+                    <div class="record-type-checkboxes">
+                        <label><input type="checkbox" name="record_types" value="NS"> NS</label>
+                        <label><input type="checkbox" name="record_types" value="A"> A</label>
+                        <label><input type="checkbox" name="record_types" value="AAAA"> AAAA</label>
+                        <label><input type="checkbox" name="record_types" value="MX"> MX</label>
+                        <label><input type="checkbox" name="record_types" value="TXT"> TXT</label>
+                        <label><input type="checkbox" name="record_types" value="CNAME"> CNAME</label>
+                        <label><input type="checkbox" name="record_types" value="SOA"> SOA</label>
+                        <label><input type="checkbox" name="record_types" value="SRV"> SRV</label>
+                        <label><input type="checkbox" name="record_types" value="CAA"> CAA</label>
+                        <label><input type="checkbox" name="record_types" value="PTR"> PTR</label>
+                        <label><input type="checkbox" name="record_types" value="DNSSEC"> DNSSEC</label>
+                    </div>
+                </div>
+                <div class="form-group-full">
+                    <label for="dns_server_modal">Custom DNS Server IP (Optional):</label>
+                    <input type="text" id="dns_server_modal" name="dns_server" placeholder="e.g., 8.8.8.8">
+                </div>
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Start DNS Check</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Batch WHOIS Lookup Modal -->
+    <div id="whoisBatchModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="whoisBatchModal">×</span>
+            <h2>Batch WHOIS</h2>
+            <form id="whois-batch-form-modal" action="{{ url_for('run_batch_whois') }}" method="POST">
+                <input type="hidden" id="globally_selected_ids_for_script" name="globally_selected_ids_for_script">
+                <div class="form-group-full">
+                    <label for="whois_target_type_modal">WHOIS Target:</label>
+                    <select id="whois_target_type_modal" name="whois_target_type">
+                        <option value="category">All domains in a category</option>
+                        <option value="selected_ids">Selected domains from table</option>
+                        <option value="no_whois_yet">Domains with no WHOIS record</option>
+                        <option value="all_db_domains">ALL domains in database</option>
+                    </select>
+                    <span id="selected-whois-count-display" class="diff-count-display" style="display:none;">(0 selected)</span>
+                    <span id="no-whois-yet-count-display" class="diff-count-display" style="display:none;">Calculating...</span>
+                    <span id="all-db-domains-count-display" class="diff-count-display" style="display:none;">Calculating...</span>
+                </div>
+                 <div class="form-group-full" id="category_for_whois_group_modal" style="display:block;">
+                    <label for="category_for_whois_modal">Select Category for WHOIS:</label>
+                    <select id="category_for_whois_modal" name="category_for_whois">
+                         <option value="">-- Select Category --</option>
+                        {% for category_opt in categories %}
+                            <option value="{{ category_opt }}" {% if category_opt == category_filter %}selected{% endif %}>{{ category_opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Run Batch WHOIS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="exportModal">×</span>
+            <h2>Export Data</h2>
+            <form id="export-form-modal" action="{{ url_for('export_csv') }}" method="POST">
+                <div class="form-group-full">
+                    <label>Choose Export Type:</label>
+                    <div class="radio-options">
+                        <label><input type="radio" name="export_mode" value="checked" id="export_checked" checked> Export Selected Domains</label><br>
+                        <label><input type="radio" name="export_mode" value="filtered" id="export_filtered"> Export All Filtered Domains</label>
+                    </div>
+                </div>
+                <input type="hidden" id="selected_ids" name="selected_ids">
+                <input type="hidden" name="search_term" value="{{ search_term }}">
+                <input type="hidden" name="search_by" value="{{ search_by_param }}">
+                <input type="hidden" name="category_filter" value="{{ category_filter }}">
+                {% if multi_category_filter %}
+                    {% for cat_val in multi_category_filter %}
+                        <input type="hidden" name="multi_category_filter" value="{{ cat_val }}">
+                    {% endfor %}
+                {% endif %}
+                 <input type="hidden" name="whois_privacy_filter" value="{{ whois_privacy_filter }}">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                <input type="hidden" name="sort_by" value="{{ current_sorting_info.by }}">
+                <input type="hidden" name="sort_order" value="{{ current_sorting_info.order }}">
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Download CSV</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add New Domain Modal -->
+    <div id="addDomainModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="addDomainModal">×</span>
+            <h2>Add Domain</h2>
+            <form id="add-domain-form-modal" action="{{ url_for('add_domain') }}" method="POST">
+                <div class="form-group-full">
+                    <label for="new_domain_name_add_modal">Domain Name:</label>
+                    <input type="text" id="new_domain_name_add_modal" name="domain_name" placeholder="example.com" required>
+                </div>
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Add Domain & Check</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Domain Modal -->
+    <div id="editDomainModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="editDomainModal">×</span>
+            <h2>Edit Domain</h2>
+            <form id="edit-domain-form-modal" action="{{ url_for('edit_domain_entry') }}" method="POST">
+                <input type="hidden" id="edit_entry_id" name="entry_id">
+                <div class="form-group-full">
+                    <label for="edit_domain_name">Domain Name:</label>
+                    <input type="text" id="edit_domain_name" name="new_domain_name" required>
+                </div>
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Save Changes & Recheck</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Recategorize Modal -->
+    <div id="bulkCategorizeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="bulkCategorizeModal">×</span>
+            <h2>Bulk Recategorize</h2>
+            <form id="bulk-categorize-form-modal" action="{{ url_for('update_category_bulk') }}" method="POST">
+                <input type="hidden" name="selected_ids"> <!-- Keep for selected_ids mode -->
+                <div class="form-group-full">
+                    <label for="categorize_target_mode">Target:</label>
+                    <select name="target_mode" id="categorize_target_mode">
+                        <option value="selected_ids">Selected domains from table</option>
+                        <option value="filtered">All domains matching current filters</option>
+                    </select>
+                </div>
+                <div class="form-group-full">
+                    <label for="new_category_bulk">New Category:</label>
+                    <select id="new_category_bulk" name="new_category" required>
+                         <option value="">-- Select New Category --</option>
+                        {% for category_opt in categories %}
+                            <option value="{{ category_opt }}">{{ category_opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Hidden fields to pass current filter state -->
+                <input type="hidden" name="search_term" value="{{ search_term }}">
+                <input type="hidden" name="search_by" value="{{ search_by_param }}">
+                {% if multi_category_filter %}{% for cat_val in multi_category_filter %}<input type="hidden" name="multi_category_filter" value="{{ cat_val }}">{% endfor %}{% endif %}
+                <input type="hidden" name="whois_privacy_filter" value="{{ whois_privacy_filter }}">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                <input type="hidden" name="created_date_filter" value="{{ created_date_filter }}">
+				<input type="hidden" name="expiry_date_filter" value="{{ expiry_date_filter }}">
+				<input type="hidden" name="updated_date_filter" value="{{ updated_date_filter }}">
+
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Apply Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Delete Modal -->
+    <div id="bulkDeleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="bulkDeleteModal">×</span>
+            <h2>Confirm Bulk Delete</h2>
+            <form id="bulk-delete-form-modal" action="{{ url_for('delete_domains_bulk') }}" method="POST">
+                <input type="hidden" name="selected_ids"> <!-- Keep for selected_ids mode -->
+                <div class="form-group-full">
+                    <label for="delete_target_mode">Target:</label>
+                    <select name="target_mode" id="delete_target_mode">
+                        <option value="selected_ids">Selected domains from table</option>
+                        <option value="filtered">All domains matching current filters</option>
+                    </select>
+                </div>
+                <p>Are you sure you want to delete the targeted domain entries?</p>
+                <p>This will affect <strong id="bulk-delete-count">the selected</strong> domains.</p>
+                <p style="color: red; font-weight: bold;">This action cannot be undone and will remove the domain's historical DNS lookup entries. Existing WHOIS data will be preserved.</p>
+
+                <!-- Hidden fields to pass current filter state -->
+                <input type="hidden" name="search_term" value="{{ search_term }}">
+                <input type="hidden" name="search_by" value="{{ search_by_param }}">
+                {% if multi_category_filter %}{% for cat_val in multi_category_filter %}<input type="hidden" name="multi_category_filter" value="{{ cat_val }}">{% endfor %}{% endif %}
+                <input type="hidden" name="whois_privacy_filter" value="{{ whois_privacy_filter }}">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                <input type="hidden" name="created_date_filter" value="{{ created_date_filter }}">
+				<input type="hidden" name="expiry_date_filter" value="{{ expiry_date_filter }}">
+				<input type="hidden" name="updated_date_filter" value="{{ updated_date_filter }}">
+
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button danger-button">Confirm Delete</button>
+                    <button type="button" class="button secondary-button" onclick="document.getElementById('bulkDeleteModal').style.display='none';">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CSV Upload Modal -->
+    <div id="csvUploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="csvUploadModal">×</span>
+            <h2>Upload CSV</h2>
+            <form id="csv-upload-form-modal" action="{{ url_for('upload_domains_csv') }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group-full">
+                    <label for="csv_file">File (CSV/TXT):</label>
+                    <input type="file" id="csv_file" name="csv_file" accept=".csv,.txt" required>
+                </div>
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Upload & Process</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="parseWhoisModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="parseWhoisModal">×</span>
+            <h2>Parse Raw WHOIS Data</h2>
+            <p>This will parse the raw WHOIS text from the database that already has run Batch WHOIS lookup and has data. Creation Date, Updated Date and Expiry Dates are checked.</p>
+            <form id="parse-whois-form-modal" action="{{ url_for('run_batch_parse') }}" method="POST">
+                <input type="hidden" id="globally_selected_ids_for_parse_script" name="globally_selected_ids_for_script">
+                <div class="form-group-full">
+                    <label for="parse_target_type_modal">Parse Target:</label>
+                    <select id="parse_target_type_modal" name="parse_target_type">
+                        <option value="no_parsed_data_yet">Domains missing parsed dates</option>
+                        <option value="selected_ids">Selected domains from table</option>
+                        <option value="category">All domains in a category</option>
+                        <option value="all_db_domains">ALL domains in database (re-parse)</option>
+                    </select>
+                </div>
+                 <div class="form-group-full" id="category_for_parse_group_modal" style="display:none;">
+                    <label for="category_for_parse_modal">Select Category for Parsing:</label>
+                    <select id="category_for_parse_modal" name="category_for_parse">
+                         <option value="">-- Select Category --</option>
+                        {% for category_opt in categories %}
+                            <option value="{{ category_opt }}">{{ category_opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-full button-group">
+                    <button type="submit" class="button">Start Parsing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="expiringDomainsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="expiringDomainsModal">×</span>
+            <h2 id="expiringModalTitle">Expiring Domains</h2>
+            <div id="expiring-modal-controls">
+                <a href="#" id="expiring-export-btn" class="button small-button">Export this list to CSV</a>
+            </div>
+            <div id="expiringDomainsContainer" style="margin-top: 15px;">
+                <p>Loading expiring domains...</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Progress Pop-up Modal -->
+    <div id="progress-popup-overlay" class="progress-popup-overlay">
+        <div class="progress-popup-content">
+            <button id="progress-popup-close" class="progress-popup-close-btn">×</button>
+            <h2>Batch Process Progress</h2>
+            <div id="popup-batch-progress-display" class="batch-progress-box">
+                Initializing...
+            </div>
+            <div id="popup-batch-progress-details" class="batch-progress-details" style="display:none;">
+                <span>Total to process: <strong id="popup-progress-total-domains">0</strong></span><br>
+                <span>Current: <strong id="popup-progress-current-domain">N/A</strong></span><br>
+                <span>Remaining: <strong id="popup-progress-domains-left">0</strong></span>
+            </div>
+            <div id="popup-batch-progress-bar" class="batch-progress-bar" style="display:none;">
+                <div id="popup-batch-progress-fill" class="batch-progress-fill">0%</div>
+            </div>
+            <div id="popup-batch-progress-summary" class="batch-progress-summary"></div>
+            <button id="popup-disconnect-sse" class="button danger-button" style="display:none;">Stop Monitoring</button>
+        </div>
+    </div>
+
+   <script>
+        const AppConfig = {
+            url_for_index: "{{ url_for('index') }}",
+            url_for_new_domains_count: "{{ url_for('get_new_domains_count_route') }}",
+            url_for_no_whois_count: "{{ url_for('get_domains_without_whois_count_route') }}",
+            total_unique_domains: {{ total_unique_domains or 0 }},
+            current_sorting_by: "{{ current_sorting_info.by }}",
+            current_sorting_order: "{{ current_sorting_info.order }}",
+            flashed_messages: {{ get_flashed_messages(with_categories=true)|tojson }}
+        };
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}">
+   </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Changes - Run ID: {{ run_details.run_id if run_details else 'N/A' }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        h1 { text-align: center; margin-bottom: 20px; }
+        .run-info { background-color: #e9e9e9; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .run-info p { margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .back-link { margin-top: 20px; display: block; text-align: center; }
+        .error-message { color: red; text-align: center; margin-bottom: 10px; }
+        .previous-category { color: #888; font-style: italic; }
+        .new-category { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Status Changes for Run ID: {{ run_details.run_id if run_details else 'N/A' }}</h1>
+
+        {% if error_message %}
+            <p class="error-message">{{ error_message }}</p>
+        {% endif %}
+
+        {% if run_details %}
+            <div class="run-info">
+                <p><strong>Run Timestamp:</strong> {{ run_details.run_timestamp }}</p>
+                <p><strong>Run Type:</strong> {{ run_details.run_type }}</p>
+                <p><strong>Domains Processed:</strong> {{ run_details.domains_processed }}</p>
+                <p><strong>Domains with Changes:</strong> {{ run_details.domains_changed_count }}</p>
+            </div>
+
+            {% if changes %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Change Timestamp</th>
+                            <th>Domain Name</th>
+                            <th>Previous Category</th>
+                            <th>New Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in changes %}
+                        <tr>
+                            <td>{{ change.change_timestamp }}</td>
+                            <td>{{ change.domain_name }}</td>
+                            <td><span class="previous-category">{{ change.previous_category }}</span></td>
+                            <td><span class="new-category">{{ change.new_category }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="text-align: center;">No status changes recorded for this run.</p>
+            {% endif %}
+        {% else %}
+            <p style="text-align: center;">Run details not found.</p>
+        {% endif %}
+
+        <div class="back-link">
+            <a href="{{ url_for('runs') }}" class="button secondary-button">Back to Run History</a>
+        </div>
+    </div>
+</body>
+</html>

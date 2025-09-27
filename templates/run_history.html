@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .back-link { margin-top: 20px; display: block; text-align: center; }
+        .error-message { color: red; text-align: center; margin-bottom: 10px; }
+        /* Style for clickable number */
+        .clickable-number {
+            color: #007bff; /* Standard link blue */
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .clickable-number:hover {
+            color: #0056b3; /* Darker blue on hover */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DNS Lookup Run History</h1>
+
+        {% if error_message %}
+            <p class="error-message">{{ error_message }}</p>
+        {% endif %}
+
+        {% if runs %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Timestamp</th>
+                        <th>Run Type</th>
+                        <th>Domains Processed</th>
+                        <th>Domains Changed</th> {# This column now implicitly acts as the action trigger #}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in runs %}
+                    <tr>
+                        <td>{{ run.run_id }}</td>
+                        <td>{{ run.run_timestamp }}</td>
+                        <td>{{ run.run_type }}</td>
+                        <td>{{ run.domains_processed }}</td>
+                        <td>
+                            {% if run.domains_changed_count > 0 %}
+                                <a href="{{ url_for('run_changes', run_id=run.run_id) }}" class="clickable-number">
+                                    {{ run.domains_changed_count }}
+                                </a>
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="text-align: center;">No runs found in the database.</p>
+        {% endif %}
+
+        <div class="back-link">
+            <a href="{{ url_for('index') }}" class="button secondary-button">Back to Main Lookup Results</a>
+        </div>
+    </div>
+</body>
+</html>
